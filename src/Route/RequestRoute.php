@@ -43,8 +43,10 @@ class RequestRoute extends Route
 
     public static function getDefaultConfiguration(): array
     {
-        return parent::getDefaultConfiguration() + [
+        return [
+            'enabled' => false,
             static::KEY_URL => static::DEFAULT_URL,
-        ];
+        ]
+        + parent::getDefaultConfiguration();
     }
 }
