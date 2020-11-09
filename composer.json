@@ -1,0 +1,53 @@
+{
+    "name": "form-relay/request",
+    "type": "library",
+    "description": "FormRelay route and dispatcher for (http) requests.",
+    "keywords": [
+        "framework",
+        "form",
+        "data",
+        "submission",
+        "relay",
+        "request"
+    ],
+    "homepage": "https://www.mediatis.de",
+    "license": "GPL-2.0+",
+    "authors": [
+        {
+            "name": "Michael Vöhringer",
+            "role": "Developer"
+        },
+        {
+            "name": "Meelis Karulin",
+            "role": "Developer"
+        },
+        {
+            "name": "Damian Ickler",
+            "role": "Developer"
+        },
+        {
+            "name": "Stephan Ude",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^7.2",
+        "form-relay/core": "^1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^4.8.35 || ^5.7 || ^6.4 || ^7.0"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "FormRelay\\Request\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "FormRelay\\Request\\Tests\\": "tests/"
+        }
+    }
+}
