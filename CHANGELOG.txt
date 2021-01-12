@@ -1,4 +1,8 @@
 
+1.0.3
+
+[BUGFIX] fixed class method signature
+
 1.0.2
 
 [BUGFIX] fixed default route configuration
