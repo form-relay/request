@@ -26,7 +26,7 @@ class RequestRoute extends Route
         return $url ? $url : '';
     }
 
-    protected function getDispatcher(): DataDispatcherInterface
+    protected function getDispatcher()
     {
         $url = $this->getUrl();
         if (!$url) {
