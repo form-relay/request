@@ -32,8 +32,8 @@
     ],
     "require": {
         "php": "^7.2",
-        "form-relay/core": "^1.0",
-        "guzzlehttp/guzzle": "^6.0"
+        "guzzlehttp/guzzle": "^6.0",
+        "form-relay/core": "dev-feature/LMSCB-16_async_submission"
     },
     "require-dev": {
         "phpunit/phpunit": "^4.8.35 || ^5.7 || ^6.4 || ^7.0"
