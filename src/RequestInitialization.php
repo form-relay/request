@@ -11,7 +11,4 @@ class RequestInitialization extends Initialization
     const DATA_DISPATCHERS = [
         RequestDataDispatcher::class,
     ];
-    const ROUTES = [
-        RequestRoute::class,
-    ];
 }

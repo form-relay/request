@@ -9,19 +9,16 @@ use FormRelay\Core\Route\Route;
 use FormRelay\Request\DataDispatcher\RequestDataDispatcher;
 use FormRelay\Request\Exception\InvalidUrlException;
 
-class RequestRoute extends Route
+abstract class RequestRoute extends Route
 {
     const KEY_URL = 'url';
     const DEFAULT_URL = '';
 
     protected function getUrl(): string
     {
-        $url = $this->getConfig('url', '');
+        $url = $this->getConfig(static::KEY_URL);
         if ($url) {
-            $context = new ConfigurationResolverContext($this->submission);
-            /** @var GeneralContentResolver $contentResolver */
-            $contentResolver = $this->registry->getContentResolver('general', $url, $context);
-            $url = $contentResolver->resolve();
+            $url = $this->resolveContent($url);
         }
         return $url ? $url : '';
     }
@@ -34,7 +31,10 @@ class RequestRoute extends Route
             return null;
         }
         try {
-            return $this->registry->getDataDispatcher('request', $url);
+            /** @var RequestDataDispatcher $dispatcher */
+            $dispatcher = $this->registry->getDataDispatcher('request');
+            $dispatcher->setUrl($url);
+            return $dispatcher;
         } catch (InvalidUrlException $e) {
             $this->logger->error($e->getMessage());
             return null;
@@ -44,7 +44,7 @@ class RequestRoute extends Route
     public static function getDefaultConfiguration(): array
     {
         return [
-            'enabled' => false,
+            static::KEY_ENABLED => static::DEFAULT_ENABLED,
             static::KEY_URL => static::DEFAULT_URL,
         ]
         + parent::getDefaultConfiguration();

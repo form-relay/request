@@ -4,7 +4,6 @@ namespace FormRelay\Request\DataDispatcher;
 
 use FormRelay\Core\DataDispatcher\DataDispatcher;
 use FormRelay\Core\Model\Form\DiscreteMultiValueField;
-use FormRelay\Core\Service\RegistryInterface;
 use FormRelay\Request\Exception\InvalidUrlException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
@@ -20,17 +19,9 @@ class RequestDataDispatcher extends DataDispatcher
 
     protected $method = 'POST';
 
-    protected $url;
-    protected $headers;
-    protected $cookies;
-
-    public function __construct(RegistryInterface $registry, string $url, array $cookies = [], array $headers = self::DEFAULT_HEADERS)
-    {
-        parent::__construct($registry);
-        $this->setUrl($url);
-        $this->setHeaders($headers);
-        $this->setCookies($cookies);
-    }
+    protected $url = '';
+    protected $headers = self::DEFAULT_HEADERS;
+    protected $cookies = [];
 
     public function getHeaders(): array
     {
