@@ -114,7 +114,7 @@ class RequestDataDispatcher extends DataDispatcher
      * @param array formData $data
      * @return array
      */
-    protected function parameterize($data)
+    protected function parameterize(array $data)
     {
         $params = [];
         foreach ($data as $key => $value) {
@@ -129,13 +129,14 @@ class RequestDataDispatcher extends DataDispatcher
         return $params;
     }
 
-    public function send(array $data): bool
+    protected function buildBody(array $data): string
     {
-        // body
         $params = $this->parameterize($data);
-        $requestBody = implode('&', $params);
+        return implode('&', $params);
+    }
 
-        // headers
+    protected function buildHeaders(array $data): array
+    {
         $requestHeaders = static::DEFAULT_HEADERS;
         foreach ($this->headers as $key => $value) {
             if ($value === null) {
@@ -144,8 +145,11 @@ class RequestDataDispatcher extends DataDispatcher
                 $requestHeaders[$key] = $value;
             }
         }
+        return $requestHeaders;
+    }
 
-        // cookies
+    protected function buildCookieJar(array $data): CookieJar
+    {
         $requestCookies = [];
         if (!empty($this->cookies)) {
             $host = parse_url($this->url, PHP_URL_HOST);
@@ -158,12 +162,15 @@ class RequestDataDispatcher extends DataDispatcher
                 $requestCookies[] = $cookie;
             }
         }
-        $cookieJar = new CookieJar(false, $requestCookies);
+        return new CookieJar(false, $requestCookies);
+    }
 
+    public function send(array $data): bool
+    {
         $requestOptions = [
-            'body' => $requestBody,
-            'cookies' => $cookieJar,
-            'headers' => $requestHeaders,
+            'body' => $this->buildBody($data),
+            'cookies' => $this->buildCookieJar($data),
+            'headers' => $this->buildHeaders($data),
         ];
 
         try {

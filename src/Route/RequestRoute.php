@@ -2,17 +2,17 @@
 
 namespace FormRelay\Request\Route;
 
-use FormRelay\Core\ConfigurationResolver\ContentResolver\GeneralContentResolver;
-use FormRelay\Core\ConfigurationResolver\Context\ConfigurationResolverContext;
-use FormRelay\Core\DataDispatcher\DataDispatcherInterface;
 use FormRelay\Core\Route\Route;
 use FormRelay\Request\DataDispatcher\RequestDataDispatcher;
 use FormRelay\Request\Exception\InvalidUrlException;
 
-abstract class RequestRoute extends Route
+class RequestRoute extends Route
 {
     const KEY_URL = 'url';
     const DEFAULT_URL = '';
+
+    const KEY_COOKIES = 'cookies';
+    const DEFAULT_COOKIES = [];
 
     protected function getUrl(): string
     {
@@ -23,6 +23,27 @@ abstract class RequestRoute extends Route
         return $url ? $url : '';
     }
 
+    protected function getCookies(): array
+    {
+        $result = [];
+        $cookies = $this->request->getCookies();
+        $allowedCookieNames = $this->getConfig(static::KEY_COOKIES);
+        foreach ($cookies as $name => $value) {
+            foreach ($allowedCookieNames as $allowedCookieName) {
+                if (preg_match('/^' . $allowedCookieName . '$/', $name)) {
+                    $result[$name] = $value;
+                    break;
+                }
+            }
+        }
+        return $result;
+    }
+
+    protected function getDispatcherKeyword(): string
+    {
+        return 'request';
+    }
+
     protected function getDispatcher()
     {
         $url = $this->getUrl();
@@ -30,10 +51,14 @@ abstract class RequestRoute extends Route
             $this->logger->error('no url provided for request dispatcher');
             return null;
         }
+
+        $cookies = $this->getCookies();
+
         try {
             /** @var RequestDataDispatcher $dispatcher */
-            $dispatcher = $this->registry->getDataDispatcher('request');
+            $dispatcher = $this->registry->getDataDispatcher($this->getDispatcherKeyword());
             $dispatcher->setUrl($url);
+            $dispatcher->addCookies($cookies);
             return $dispatcher;
         } catch (InvalidUrlException $e) {
             $this->logger->error($e->getMessage());
@@ -46,6 +71,7 @@ abstract class RequestRoute extends Route
         return [
             static::KEY_ENABLED => static::DEFAULT_ENABLED,
             static::KEY_URL => static::DEFAULT_URL,
+            static::KEY_COOKIES => static::DEFAULT_COOKIES,
         ]
         + parent::getDefaultConfiguration();
     }
