@@ -2,8 +2,10 @@
 
 namespace FormRelay\Request\Route;
 
+use FormRelay\Core\Model\Submission\SubmissionInterface;
+use FormRelay\Core\Request\RequestInterface;
 use FormRelay\Core\Route\Route;
-use FormRelay\Request\DataDispatcher\RequestDataDispatcher;
+use FormRelay\Request\DataDispatcher\RequestDataDispatcherInterface;
 use FormRelay\Request\Exception\InvalidUrlException;
 
 class RequestRoute extends Route
@@ -23,20 +25,19 @@ class RequestRoute extends Route
         return $url ? $url : '';
     }
 
-    protected function getCookies(): array
+    protected function getCookiesToPass(array $requestCookies): array
     {
-        $result = [];
-        $cookies = $this->request->getCookies();
+        $cookies = [];
         $allowedCookieNames = $this->getConfig(static::KEY_COOKIES);
-        foreach ($cookies as $name => $value) {
+        foreach ($requestCookies as $name => $value) {
             foreach ($allowedCookieNames as $allowedCookieName) {
                 if (preg_match('/^' . $allowedCookieName . '$/', $name)) {
-                    $result[$name] = $value;
+                    $cookies[$name] = $value;
                     break;
                 }
             }
         }
-        return $result;
+        return $cookies;
     }
 
     protected function getDispatcherKeyword(): string
@@ -52,10 +53,10 @@ class RequestRoute extends Route
             return null;
         }
 
-        $cookies = $this->getCookies();
+        $cookies = $this->getCookiesToPass($this->submission->getContext()->getCookies());
 
         try {
-            /** @var RequestDataDispatcher $dispatcher */
+            /** @var RequestDataDispatcherInterface $dispatcher */
             $dispatcher = $this->registry->getDataDispatcher($this->getDispatcherKeyword());
             $dispatcher->setUrl($url);
             $dispatcher->addCookies($cookies);
@@ -64,6 +65,13 @@ class RequestRoute extends Route
             $this->logger->error($e->getMessage());
             return null;
         }
+    }
+
+    public function addContext(SubmissionInterface $submission, RequestInterface $request)
+    {
+        parent::addContext($submission, $request);
+        $cookies = $this->getCookiesToPass($request->getCookies());
+        $submission->getContext()->addCookies($cookies);
     }
 
     public static function getDefaultConfiguration(): array

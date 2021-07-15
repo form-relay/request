@@ -10,18 +10,21 @@ use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\Exception\GuzzleException;
 
-class RequestDataDispatcher extends DataDispatcher
+class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatcherInterface
 {
-    const DEFAULT_HEADERS = [
-        'Content-Type' => 'application/x-www-form-urlencoded',
-        'Accept' => '*/*',
-    ];
-
     protected $method = 'POST';
 
     protected $url = '';
-    protected $headers = self::DEFAULT_HEADERS;
+    protected $headers = [];
     protected $cookies = [];
+
+    protected function getDefaultHeaders(): array
+    {
+        return [
+            'Content-Type' => 'application/x-www-form-urlencoded',
+            'Accept' => '*/*',
+        ];
+    }
 
     public function getHeaders(): array
     {
@@ -35,12 +38,8 @@ class RequestDataDispatcher extends DataDispatcher
 
     public function addHeader(string $name, string $value)
     {
-        if ($value === null) {
-            unset($this->headers[$name]);
-        } else {
             $this->headers[$name] = $value;
         }
-    }
 
     public function addHeaders(array $headers)
     {
@@ -137,7 +136,7 @@ class RequestDataDispatcher extends DataDispatcher
 
     protected function buildHeaders(array $data): array
     {
-        $requestHeaders = static::DEFAULT_HEADERS;
+        $requestHeaders = $this->getDefaultHeaders();
         foreach ($this->headers as $key => $value) {
             if ($value === null) {
                 unset($requestHeaders[$key]);
