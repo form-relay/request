@@ -1,4 +1,8 @@
 
+2.0.0
+
+[FEATURE] Asynchronous Submissions
+
 1.0.3
 
 [BUGFIX] fixed class method signature
