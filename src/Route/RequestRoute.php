@@ -2,11 +2,10 @@
 
 namespace FormRelay\Request\Route;
 
-use FormRelay\Core\ConfigurationResolver\ContentResolver\GeneralContentResolver;
-use FormRelay\Core\ConfigurationResolver\Context\ConfigurationResolverContext;
-use FormRelay\Core\DataDispatcher\DataDispatcherInterface;
+use FormRelay\Core\Model\Submission\SubmissionInterface;
+use FormRelay\Core\Request\RequestInterface;
 use FormRelay\Core\Route\Route;
-use FormRelay\Request\DataDispatcher\RequestDataDispatcher;
+use FormRelay\Request\DataDispatcher\RequestDataDispatcherInterface;
 use FormRelay\Request\Exception\InvalidUrlException;
 
 class RequestRoute extends Route
@@ -14,16 +13,36 @@ class RequestRoute extends Route
     const KEY_URL = 'url';
     const DEFAULT_URL = '';
 
+    const KEY_COOKIES = 'cookies';
+    const DEFAULT_COOKIES = [];
+
     protected function getUrl(): string
     {
-        $url = $this->getConfig('url', '');
+        $url = $this->getConfig(static::KEY_URL);
         if ($url) {
-            $context = new ConfigurationResolverContext($this->submission);
-            /** @var GeneralContentResolver $contentResolver */
-            $contentResolver = $this->registry->getContentResolver('general', $url, $context);
-            $url = $contentResolver->resolve();
+            $url = $this->resolveContent($url);
         }
         return $url ? $url : '';
+    }
+
+    protected function getCookiesToPass(array $requestCookies): array
+    {
+        $cookies = [];
+        $allowedCookieNames = $this->getConfig(static::KEY_COOKIES);
+        foreach ($requestCookies as $name => $value) {
+            foreach ($allowedCookieNames as $allowedCookieName) {
+                if (preg_match('/^' . $allowedCookieName . '$/', $name)) {
+                    $cookies[$name] = $value;
+                    break;
+                }
+            }
+        }
+        return $cookies;
+    }
+
+    protected function getDispatcherKeyword(): string
+    {
+        return 'request';
     }
 
     protected function getDispatcher()
@@ -33,19 +52,34 @@ class RequestRoute extends Route
             $this->logger->error('no url provided for request dispatcher');
             return null;
         }
+
+        $cookies = $this->getCookiesToPass($this->submission->getContext()->getCookies());
+
         try {
-            return $this->registry->getDataDispatcher('request', $url);
+            /** @var RequestDataDispatcherInterface $dispatcher */
+            $dispatcher = $this->registry->getDataDispatcher($this->getDispatcherKeyword());
+            $dispatcher->setUrl($url);
+            $dispatcher->addCookies($cookies);
+            return $dispatcher;
         } catch (InvalidUrlException $e) {
             $this->logger->error($e->getMessage());
             return null;
         }
     }
 
+    public function addContext(SubmissionInterface $submission, RequestInterface $request)
+    {
+        parent::addContext($submission, $request);
+        $cookies = $this->getCookiesToPass($request->getCookies());
+        $submission->getContext()->addCookies($cookies);
+    }
+
     public static function getDefaultConfiguration(): array
     {
         return [
-            'enabled' => false,
+            static::KEY_ENABLED => static::DEFAULT_ENABLED,
             static::KEY_URL => static::DEFAULT_URL,
+            static::KEY_COOKIES => static::DEFAULT_COOKIES,
         ]
         + parent::getDefaultConfiguration();
     }

@@ -4,32 +4,26 @@ namespace FormRelay\Request\DataDispatcher;
 
 use FormRelay\Core\DataDispatcher\DataDispatcher;
 use FormRelay\Core\Model\Form\DiscreteMultiValueField;
-use FormRelay\Core\Service\RegistryInterface;
 use FormRelay\Request\Exception\InvalidUrlException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\Exception\GuzzleException;
 
-class RequestDataDispatcher extends DataDispatcher
+class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatcherInterface
 {
-    const DEFAULT_HEADERS = [
-        'Content-Type' => 'application/x-www-form-urlencoded',
-        'Accept' => '*/*',
-    ];
-
     protected $method = 'POST';
 
-    protected $url;
-    protected $headers;
-    protected $cookies;
+    protected $url = '';
+    protected $headers = [];
+    protected $cookies = [];
 
-    public function __construct(RegistryInterface $registry, string $url, array $cookies = [], array $headers = self::DEFAULT_HEADERS)
+    protected function getDefaultHeaders(): array
     {
-        parent::__construct($registry);
-        $this->setUrl($url);
-        $this->setHeaders($headers);
-        $this->setCookies($cookies);
+        return [
+            'Content-Type' => 'application/x-www-form-urlencoded',
+            'Accept' => '*/*',
+        ];
     }
 
     public function getHeaders(): array
@@ -42,7 +36,11 @@ class RequestDataDispatcher extends DataDispatcher
         $this->headers = $headers;
     }
 
-    public function addHeader(string $name, string $value)
+    /**
+     * @param string $name
+     * @param string|null $value
+     */
+    public function addHeader(string $name, $value)
     {
         if ($value === null) {
             unset($this->headers[$name]);
@@ -73,7 +71,11 @@ class RequestDataDispatcher extends DataDispatcher
         $this->cookies = $cookies;
     }
 
-    public function addCookie(string $name, string $value)
+    /**
+     * @param string $name
+     * @param string|null $value
+     */
+    public function addCookie(string $name, $value)
     {
         if ($value === null) {
             unset($this->cookies[$name]);
@@ -119,11 +121,12 @@ class RequestDataDispatcher extends DataDispatcher
     }
 
     /**
-     * urlencode data and parse fields of type DiscreteMultiValueField
-     * @param array formData $data
+     * url-encode data and parse fields of type DiscreteMultiValueField
+     *
+     * @param array $data
      * @return array
      */
-    protected function parameterize($data)
+    protected function parameterize(array $data): array
     {
         $params = [];
         foreach ($data as $key => $value) {
@@ -138,14 +141,15 @@ class RequestDataDispatcher extends DataDispatcher
         return $params;
     }
 
-    public function send(array $data): bool
+    protected function buildBody(array $data): string
     {
-        // body
         $params = $this->parameterize($data);
-        $requestBody = implode('&', $params);
+        return implode('&', $params);
+    }
 
-        // headers
-        $requestHeaders = static::DEFAULT_HEADERS;
+    protected function buildHeaders(array $data): array
+    {
+        $requestHeaders = $this->getDefaultHeaders();
         foreach ($this->headers as $key => $value) {
             if ($value === null) {
                 unset($requestHeaders[$key]);
@@ -153,8 +157,11 @@ class RequestDataDispatcher extends DataDispatcher
                 $requestHeaders[$key] = $value;
             }
         }
+        return $requestHeaders;
+    }
 
-        // cookies
+    protected function buildCookieJar(array $data): CookieJar
+    {
         $requestCookies = [];
         if (!empty($this->cookies)) {
             $host = parse_url($this->url, PHP_URL_HOST);
@@ -167,12 +174,15 @@ class RequestDataDispatcher extends DataDispatcher
                 $requestCookies[] = $cookie;
             }
         }
-        $cookieJar = new CookieJar(false, $requestCookies);
+        return new CookieJar(false, $requestCookies);
+    }
 
+    public function send(array $data): bool
+    {
         $requestOptions = [
-            'body' => $requestBody,
-            'cookies' => $cookieJar,
-            'headers' => $requestHeaders,
+            'body' => $this->buildBody($data),
+            'cookies' => $this->buildCookieJar($data),
+            'headers' => $this->buildHeaders($data),
         ];
 
         try {
