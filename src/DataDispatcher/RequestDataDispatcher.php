@@ -36,9 +36,17 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
         $this->headers = $headers;
     }
 
-    public function addHeader(string $name, string $value)
+    /**
+     * @param string $name
+     * @param string|null $value
+     */
+    public function addHeader(string $name, $value)
     {
-        $this->headers[$name] = $value;
+        if ($value === null) {
+            unset($this->headers[$name]);
+        } else {
+            $this->headers[$name] = $value;
+        }
     }
 
     public function addHeaders(array $headers)
@@ -63,7 +71,11 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
         $this->cookies = $cookies;
     }
 
-    public function addCookie(string $name, string $value)
+    /**
+     * @param string $name
+     * @param string|null $value
+     */
+    public function addCookie(string $name, $value)
     {
         if ($value === null) {
             unset($this->cookies[$name]);
@@ -109,11 +121,12 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
     }
 
     /**
-     * urlencode data and parse fields of type DiscreteMultiValueField
-     * @param array formData $data
+     * url-encode data and parse fields of type DiscreteMultiValueField
+     *
+     * @param array $data
      * @return array
      */
-    protected function parameterize(array $data)
+    protected function parameterize(array $data): array
     {
         $params = [];
         foreach ($data as $key => $value) {
