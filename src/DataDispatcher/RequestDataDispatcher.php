@@ -38,8 +38,8 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
 
     public function addHeader(string $name, string $value)
     {
-            $this->headers[$name] = $value;
-        }
+        $this->headers[$name] = $value;
+    }
 
     public function addHeaders(array $headers)
     {
