@@ -3,12 +3,15 @@
 namespace FormRelay\Request\DataDispatcher;
 
 use FormRelay\Core\DataDispatcher\DataDispatcher;
+use FormRelay\Core\Exception\FormRelayException;
 use FormRelay\Core\Model\Form\DiscreteMultiValueField;
+use FormRelay\Core\Utility\GeneralUtility;
 use FormRelay\Request\Exception\InvalidUrlException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Http\Message\ResponseInterface;
 
 class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatcherInterface
 {
@@ -17,6 +20,15 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
     protected $url = '';
     protected $headers = [];
     protected $cookies = [];
+
+    /**
+     * list of allowed response status codes
+     * can have an "x" to allow all digits
+     * example: 2xx
+     *
+     * @var array $allowedStatusCodes
+     */
+    protected $allowedStatusCodes = [];
 
     protected function getDefaultHeaders(): array
     {
@@ -120,6 +132,20 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
         $this->method = $method;
     }
 
+    public function getAllowedStatusCodes(): array
+    {
+        return $this->allowedStatusCodes;
+    }
+
+    /**
+     * @param string|array $statusCodes
+     */
+    public function setAllowedStatusCodes($statusCodes)
+    {
+        $statusCodes = GeneralUtility::castValueToArray($statusCodes);
+        $this->allowedStatusCodes = $statusCodes;
+    }
+
     /**
      * url-encode data and parse fields of type DiscreteMultiValueField
      *
@@ -177,7 +203,29 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
         return new CookieJar(false, $requestCookies);
     }
 
-    public function send(array $data): bool
+    protected function checkStatusCode(int $statusCode): bool
+    {
+        if (empty($this->allowedStatusCodes)) {
+            return true;
+        }
+        foreach ($this->allowedStatusCodes as $allowedStatusCode) {
+            $pattern = '/^' . str_replace('x', '[0-9]', strtolower($allowedStatusCode)) . '$/';
+            if (preg_match($pattern, (string)$statusCode)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected function validateResponse(ResponseInterface $response)
+    {
+        $statusCode = $response->getStatusCode();
+        if (!$this->checkStatusCode($statusCode)) {
+            throw new FormRelayException('request returned status code "' . $statusCode . '"');
+        }
+    }
+
+    public function send(array $data)
     {
         $requestOptions = [
             'body' => $this->buildBody($data),
@@ -188,15 +236,9 @@ class RequestDataDispatcher extends DataDispatcher implements RequestDataDispatc
         try {
             $client = new Client();
             $response = $client->request($this->method, $this->url, $requestOptions);
-            $status_code = $response->getStatusCode();
-            if ($status_code < 200 || $status_code >= 300) {
-                $this->logger->error('request returned status code "' . $status_code . '"');
-                return false;
-            }
-            return true;
+            $this->validateResponse($response);
         } catch (GuzzleException $e) {
-            $this->logger->error($e->getMessage());
-            return false;
+            throw new FormRelayException($e->getMessage(), $e->getCode(), $e);
         }
     }
 }

@@ -22,11 +22,17 @@ interface RequestDataDispatcherInterface extends DataDispatcherInterface
     public function getUrl(): string;
     /**
      * @param string $url
-     * @return mixed
      * @throws InvalidUrlException
      */
     public function setUrl(string $url);
 
     public function getMethod(): string;
     public function setMethod(string $method);
+
+    public function getAllowedStatusCodes(): array;
+
+    /**
+     * @param string|array $statusCodes
+     */
+    public function setAllowedStatusCodes($statusCodes);
 }
