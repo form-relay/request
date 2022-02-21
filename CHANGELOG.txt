@@ -1,3 +1,6 @@
+2.1.0
+
+[TASK] Allow installation in both, guzzlehttp/guzzle 6 and 7 systems
 
 2.0.0
 
