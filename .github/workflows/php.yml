@@ -17,6 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Setup PHP with composer v2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          tools: composer:v2
+
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
 
@@ -31,12 +37,6 @@ jobs:
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
-
-      - name: Setup PHP with composer v2
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php-versions }}
-          tools: composer:v2
 
       - name: Run tests
         run: composer run-script testdox
