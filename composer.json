@@ -33,7 +33,7 @@
     "require": {
         "php": "^7.2 || ^8.0",
         "guzzlehttp/guzzle": "^6.0||^7.0",
-        "form-relay/core": "^2.0"
+        "form-relay/core": "dev-feature/LMSM22-105-route-context-updates"
     },
     "require-dev": {
         "phpunit/phpunit": "^7.0 || ^8.0"
