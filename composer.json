@@ -11,7 +11,7 @@
         "request"
     ],
     "homepage": "https://www.mediatis.de",
-    "license": "GPL-2.0+",
+    "license": "GPL-2.0-or-later",
     "authors": [
         {
             "name": "Michael Vöhringer",
