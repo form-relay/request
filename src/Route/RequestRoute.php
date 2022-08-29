@@ -13,9 +13,45 @@ class RequestRoute extends Route
     const KEY_URL = 'url';
     const DEFAULT_URL = '';
 
+    const KEYWORD_PASSTHROUGH = '__PASSTHROUGH';
+    const KEYWORD_UNSET = '__UNSET';
+
+    /*
+     * example cookie configurations
+     * 
+     * # just pass through the cookies that match one of the listed cookie name patterns
+     * cookies:
+     *     - cookieName1
+     *     - cookieName2
+     *     - cookieNameRegexpPattern3
+     * 
+     * # advanced cookie configuration
+     * cookies:
+     *     cookieName1: constantCookieValue1
+     *     cookieName2: __PASSTHROUGH
+     *     cookieNameRegexpPattern3: __PASSTHROUGH
+     *     cookieName4: __UNSET
+     */
     const KEY_COOKIES = 'cookies';
     const DEFAULT_COOKIES = [];
 
+    /*
+     * example cookie configurations
+     * 
+     * # just pass through the listed headers
+     * headers:
+     *     - User-Agent
+     *     - Accept
+     * 
+     * # advanced header configuration
+     * headers:
+     *     User-Agent: __PASSTHROUGH
+     *     Accept: application/json
+     *     Content-Type: __UNSET
+     */
+    const KEY_HEADERS = 'headers';
+    const DEFAULT_HEADERS = [];
+    
     protected function getUrl(): string
     {
         $url = $this->getConfig(static::KEY_URL);
@@ -25,19 +61,147 @@ class RequestRoute extends Route
         return $url ? $url : '';
     }
 
-    protected function getCookiesToPass(array $requestCookies): array
+    protected function getSubmissionCookies(RequestInterface $request): array
     {
         $cookies = [];
-        $allowedCookieNames = $this->getConfig(static::KEY_COOKIES);
-        foreach ($requestCookies as $name => $value) {
-            foreach ($allowedCookieNames as $allowedCookieName) {
-                if (preg_match('/^' . $allowedCookieName . '$/', $name)) {
-                    $cookies[$name] = $value;
-                    break;
+        $cookieConfig = $this->getConfig(static::KEY_COOKIES);
+        $cookieNamePatterns = [];
+        foreach ($cookieConfig as $cookieName => $cookieValue) {
+            if (is_numeric($cookieName)) {
+                $cookieName = $cookieValue;
+                $cookieValue = static::KEYWORD_PASSTHROUGH;
+            }
+            $cookieValue = $this->resolveContent($cookieValue);
+            if ($cookieValue === static::KEYWORD_PASSTHROUGH) {
+                $cookieNamePatterns[] = $cookieName;
+            }
+        }
+        foreach ($request->getCookies() as $cookieName => $cookieValue) {
+            foreach ($cookieNamePatterns as $cookieNamePattern) {
+                if (preg_match('/^' . $cookieNamePattern . '$/', $cookieName)) {
+                    $cookies[$cookieName] = $cookieValue;
                 }
             }
         }
         return $cookies;
+    }
+
+    protected function getCookies(array $submissionCookies): array
+    {
+        $cookies = [];
+        $cookieConfig = $this->getConfig(static::KEY_COOKIES);
+        foreach ($cookieConfig as $cookieName => $cookieValue) {
+            if (is_numeric($cookieName)) {
+                $cookieName = $cookieValue;
+                $cookieValue = static::KEYWORD_PASSTHROUGH;
+            }
+            $cookieValue = $this->resolveContent($cookieValue);
+            if ($cookieValue === null) {
+                continue;
+            }
+            switch ($cookieValue) {
+                case static::KEYWORD_PASSTHROUGH:
+                    $cookieNamePattern = $cookieName;
+                    foreach ($submissionCookies as $submissionCookieName => $submissionCookieValue) {
+                        if (preg_match('/^' . $cookieNamePattern . '$/', $submissionCookieName)) {
+                            $cookies[$submissionCookieName] = $submissionCookieValue;
+                        }
+                    }
+                    break;
+                case static::KEYWORD_UNSET:
+                    $cookies[$cookieName] = null;
+                    break;
+                default:
+                    $cookies[$cookieName] = $cookieValue;
+                    break;
+            }
+        }
+        return $cookies;
+    }
+
+    protected function getPotentialInternalHeaderNames(string $headerName): array
+    {
+        // example: 'User-Agent' => ['User-Agent', 'HTTP_USER_AGENT', 'USER_AGENT']
+        $name = preg_replace_callback('/-([A-Z])/', function(array $matches) {
+            return '_' . $matches[1];
+        }, $headerName);
+        $name = strtoupper($name);
+        return [
+            $headerName,
+            'HTTP_' . $name,
+            $name,
+        ];
+    }
+
+    /**
+     * Headers to be passed from the submission request (during context processing)
+     * @param RequestInterface $request
+     * @return array
+     */
+    protected function getSubmissionHeaders(RequestInterface $request): array
+    {
+        $headers = [];
+        $headerConfig = $this->getConfig(static::KEY_HEADERS);
+        foreach ($headerConfig as $headerName => $headerValue) {
+            if (is_numeric($headerName)) {
+                $headerName = $headerValue;
+                $headerValue = static::KEYWORD_PASSTHROUGH;
+            }
+            $headerValue = $this->resolveContent($headerValue);
+            if ($headerValue === static::KEYWORD_PASSTHROUGH) {
+                foreach ($this->getPotentialInternalHeaderNames($headerName) as $potentialHeaderName) {
+                    $headerValue = $request->getRequestVariable($potentialHeaderName);
+                    if ($headerValue) {
+                        $headers[$potentialHeaderName] = $headerValue;
+                        break;
+                    }
+                }
+            }
+        }
+        return $headers;
+    }
+    
+    /**
+     * Headers to be sent with the upcoming http request
+     * @param array $submissionHeaders
+     * @return array
+     */
+    protected function getHeaders(array $submissionHeaders): array
+    {
+        $headers = [];
+        $headerConfig = $this->getConfig(static::KEY_HEADERS);
+        foreach ($headerConfig as $headerName => $headerValue) {
+            if (is_numeric($headerName)) {
+                $headerName = $headerValue;
+                $headerValue = static::KEYWORD_PASSTHROUGH;
+            }
+            $headerValue = $this->resolveContent($headerValue);
+            if ($headerValue === null) {
+                continue;
+            }
+            switch ($headerValue) {
+                case static::KEYWORD_PASSTHROUGH:
+                    $headerValue = null;
+                    foreach ($this->getPotentialInternalHeaderNames($headerName) as $potentialHeaderName) {
+                        if (isset($submissionHeaders[$potentialHeaderName])) {
+                            $headerValue = $submissionHeaders[$potentialHeaderName];
+                            break;
+                        }
+                    }
+                    if ($headerValue !== null) {
+                        $headers[$headerName] = $headerValue;
+                    }
+                    break;
+                case static::KEYWORD_UNSET:
+                    $headerValue = null;
+                    $headers[$headerName] = $headerValue;
+                    break;
+                default:
+                    $headers[$headerName] = $headerValue;
+                    break;
+            }
+        }
+        return $headers;
     }
 
     protected function getDispatcherKeyword(): string
@@ -53,13 +217,15 @@ class RequestRoute extends Route
             return null;
         }
 
-        $cookies = $this->getCookiesToPass($this->submission->getContext()->getCookies());
+        $cookies = $this->getCookies($this->submission->getContext()->getCookies());
+        $headers = $this->getHeaders($this->submission->getContext()->getRequestVariables());
 
         try {
             /** @var RequestDataDispatcherInterface $dispatcher */
             $dispatcher = $this->registry->getDataDispatcher($this->getDispatcherKeyword());
             $dispatcher->setUrl($url);
             $dispatcher->addCookies($cookies);
+            $dispatcher->addHeaders($headers);
             return $dispatcher;
         } catch (InvalidUrlException $e) {
             $this->logger->error($e->getMessage());
@@ -67,11 +233,15 @@ class RequestRoute extends Route
         }
     }
 
-    public function addContext(SubmissionInterface $submission, RequestInterface $request)
+    public function addContext(SubmissionInterface $submission, RequestInterface $request, int $pass)
     {
-        parent::addContext($submission, $request);
-        $cookies = $this->getCookiesToPass($request->getCookies());
+        parent::addContext($submission, $request, $pass);
+        
+        $cookies = $this->getSubmissionCookies($request);
         $submission->getContext()->addCookies($cookies);
+
+        $headers = $this->getSubmissionHeaders($request);
+        $submission->getContext()->addRequestVariables($headers);
     }
 
     public static function getDefaultConfiguration(): array
@@ -80,6 +250,7 @@ class RequestRoute extends Route
             static::KEY_ENABLED => static::DEFAULT_ENABLED,
             static::KEY_URL => static::DEFAULT_URL,
             static::KEY_COOKIES => static::DEFAULT_COOKIES,
+            static::KEY_HEADERS => static::DEFAULT_HEADERS,
         ]
         + parent::getDefaultConfiguration();
     }
