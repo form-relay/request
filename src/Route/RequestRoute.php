@@ -101,9 +101,9 @@ class RequestRoute extends Route
             }
             switch ($cookieValue) {
                 case static::KEYWORD_PASSTHROUGH:
-                    $cookieNamePattern = $cookieName;
+                    $cookieNamePattern = '/^' .$cookieName . '$/';
                     foreach ($submissionCookies as $submissionCookieName => $submissionCookieValue) {
-                        if (preg_match('/^' . $cookieNamePattern . '$/', $submissionCookieName)) {
+                        if (preg_match($cookieNamePattern, $submissionCookieName)) {
                             $cookies[$submissionCookieName] = $submissionCookieValue;
                         }
                     }
