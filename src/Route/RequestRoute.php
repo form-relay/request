@@ -36,7 +36,7 @@ class RequestRoute extends Route
     const DEFAULT_COOKIES = [];
 
     /*
-     * example cookie configurations
+     * example header configurations
      * 
      * # just pass through the listed headers
      * headers:
@@ -193,8 +193,7 @@ class RequestRoute extends Route
                     }
                     break;
                 case static::KEYWORD_UNSET:
-                    $headerValue = null;
-                    $headers[$headerName] = $headerValue;
+                    $headers[$headerName] = null;
                     break;
                 default:
                     $headers[$headerName] = $headerValue;
