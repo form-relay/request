@@ -11,7 +11,7 @@
         "request"
     ],
     "homepage": "https://www.mediatis.de",
-    "license": "GPL-2.0+",
+    "license": "GPL-2.0-or-later",
     "authors": [
         {
             "name": "Michael Vöhringer",
@@ -31,12 +31,12 @@
         }
     ],
     "require": {
-        "php": "^7.2",
-        "guzzlehttp/guzzle": "^6.0||^7.0",
-        "form-relay/core": "^2.0"
+        "php": "^7.2 || ^8.0",
+        "guzzlehttp/guzzle": "^6.0 || ^7.0",
+        "form-relay/core": "^2.3.1"
     },
     "require-dev": {
-        "phpunit/phpunit": "^4.8.35 || ^5.7 || ^6.4 || ^7.0"
+        "phpunit/phpunit": "^7.0 || ^8.0"
     },
     "config": {
         "sort-packages": true
@@ -48,7 +48,12 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "FormRelay\\Request\\Tests\\": "tests/"
+            "FormRelay\\Request\\Tests\\": "tests/",
+            "FormRelay\\Core\\Tests\\": "vendor/form-relay/core/tests/"
         }
+    },
+    "scripts": {
+      "test": "./vendor/bin/phpunit --bootstrap vendor/autoload.php tests/",
+      "testdox": "./vendor/bin/phpunit --bootstrap vendor/autoload.php --testdox --colors=always tests/"
     }
 }
