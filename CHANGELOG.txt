@@ -1,3 +1,8 @@
+
+2.2.0
+
+[FEATURE] Allow RequestRoute to set Headers and custom Cookies (LMSM22-105) (#3)
+
 2.1.0
 
 [TASK] Allow installation in both, guzzlehttp/guzzle 6 and 7 systems
